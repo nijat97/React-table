@@ -11,14 +11,19 @@ const Posts = () => {
         //         console.log(res.data);
         //         setPosts(res.data);
         // });
-    
-        window.addEventListener("new_readings", (event) => {
-            setPost([]);
-            console.log("new_readings",event.detail);
-            setPost(event.detail);
+        if(!!window.EventSource)
+        {
+            var source = new EventSource('/events');
+        }
+
+        source.addEventListener('new_readings', (event) => {
+            //setPost([]);
+            console.log("new_readings",event.data);
+            setPost(JSON.parse(event.data));
+            console.log(post);
         });
      
-    },[])
+    },[post]);
 
     return ( <div>{
         !post ? ("No data found "):(
