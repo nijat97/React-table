@@ -11,6 +11,7 @@ const Posts = () => {
         //         console.log(res.data);
         //         setPosts(res.data);
         // });
+        var rows=[];
         if(!!window.EventSource)
         {
             var source = new EventSource('/events');
@@ -20,6 +21,11 @@ const Posts = () => {
             //setPost([]);
             console.log("new_readings",event.data);
             setPost(JSON.parse(event.data));
+
+            for(var i=0;i<post.numOfPairs;i++)
+            {
+
+            }
             console.log(post);
         });
      
@@ -30,21 +36,34 @@ const Posts = () => {
             <table className='table'>
                 <thead>
                     <tr>
-                        <th>Device ID</th>
-                        <th>Temperature</th>
-                        <th>Humidity</th>
+                        <th>Sender Address</th>
+                        <th>Target Address</th>
+                        <th>Message ID</th>
+                        <th>Data</th>
                         <th>Control</th>
                     </tr>
                 </thead>
                 <tbody>
                     {
                         post.map(device => (
-                            <tr key={device.id}>
-                                <td>{device.id}</td>
-                                <td>{device.temperature}</td>
-                                <td>{device.humidity}</td>
-                                <td>{device.readingId}</td>
+                            <>
+                            <tr key={device.sender}>
+                                <td rowSpan={device.data.length + 1}>
+                                    {device.sender}</td>
+                                <td rowSpan={device.data.length + 1}>
+                                    {device.target}</td>
+                                <td rowSpan={device.data.length + 1}>
+                                    {device.readingId}</td>
                             </tr>
+                           {
+                               device.data.map(data => (
+                                   <tr>
+                                        <td>{data}</td>
+                                   </tr>
+                               )
+                                )
+                           }
+                           </>
                    ))
                    
                     }
