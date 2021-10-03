@@ -11,7 +11,6 @@ const Posts = () => {
         //         console.log(res.data);
         //         setPosts(res.data);
         // });
-        var rows=[];
         if(!!window.EventSource)
         {
             var source = new EventSource('/events');
@@ -21,11 +20,6 @@ const Posts = () => {
             //setPost([]);
             console.log("new_readings",event.data);
             setPost(JSON.parse(event.data));
-
-            for(var i=0;i<post.numOfPairs;i++)
-            {
-
-            }
             console.log(post);
         });
      
@@ -39,8 +33,8 @@ const Posts = () => {
                         <th>Sender Address</th>
                         <th>Target Address</th>
                         <th>Message ID</th>
-                        <th>Data</th>
                         <th>Control</th>
+                        <th>Data</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -54,23 +48,24 @@ const Posts = () => {
                                     {device.target}</td>
                                 <td rowSpan={device.data.length + 1}>
                                     {device.readingId}</td>
+                                <td rowSpan={device.data.length + 1}>
+                                    <p className="btn btn-success"> {"LED"} </p>
+                                </td>
                             </tr>
+                           
                            {
                                device.data.map(data => (
                                    <tr>
                                         <td>{data}</td>
                                    </tr>
-                               )
-                                )
-                           }
+                          ))}
+                          
                            </>
-                   ))
-                   
-                    }
+                   ))}
                 </tbody>
             </table>
-        )
-        }</div> );
+        )}
+        </div> );
 }
  
 export default Posts;
