@@ -1,31 +1,83 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from "axios";
 
 
 const Posts = () => {
     const [post, setPost] = useState([]);
+    const [pairs, setPairs] = useState({});
 
-    useEffect(()=>{
+    const handleChange = (event, sender) => {
+        const name = event.target.name;
+        const value = event.target.value;
+        setPairs(values => ({...values,  [sender]: { ...values[sender], [name]: value}}))
+        
+        console.log("handle",pairs)
+      }
+
+    const sendPairs = () => {
+     
+        console.log("sendPairsFunc",pairs)
+        for(var k in pairs)
+        {
+            console.log(pairs[k])
+        }
+        axios.post('/update', {
+            pairs
+          })
+          .then((response) => {
+            console.log(response);
+          }, (error) => {
+            console.log(error);
+          });
+
+         
+      }
+
+    //useEffect(()=>{
         // axios.get('https://jsonplaceholder.typicode.com/todos')
         // .then(res=>{
         //         console.log(res.data);
         //         setPosts(res.data);
         // });
-        if(!!window.EventSource)
+
+        // if(!!window.EventSource)
+        // {
+        //     var source = new EventSource('/events');
+        // }
+
+        const callBackForEvent = useCallback( (event) =>
         {
-            var source = new EventSource('/events');
-        }
+            for(const prop in event.detail)
+            {
+                    if(!(pairs.hasOwnProperty(event.detail[prop].sender)))
+                    {
+                        setPairs( values => ({...values,  [event.detail[prop].sender]:{ } }));
+                    } 
+            }            
+         
+            for(var k in pairs)
+            {
+                if(event.detail.find( ({ sender }) => sender === parseInt(k,10) ) === undefined)
+                {
+                    delete pairs[k]
+                }
+            }
+            console.log("useeffect", pairs)
+            setPost(event.detail);
 
-        source.addEventListener('new_readings', (event) => {
-            //setPost([]);
-            console.log("new_readings",event.data);
-            setPost(JSON.parse(event.data));
-            console.log(post);
-        });
+            
+        },[pairs]);
+
+        useEffect(() =>{
+
+            window.addEventListener('new_readings', callBackForEvent)
+
+            return () => window.removeEventListener('new_readings', callBackForEvent)
+        },[callBackForEvent])
      
-    },[post]);
+   // },[pairs]);
 
-    return ( <div>{
+    return (<> <div>{
         !post ? ("No data found "):(
             <table className='table'>
                 <thead>
@@ -49,7 +101,29 @@ const Posts = () => {
                                 <td rowSpan={device.data.length + 1}>
                                     {device.readingId}</td>
                                 <td rowSpan={device.data.length + 1}>
-                                    <p className="btn btn-success"> {"LED"} </p>
+                                    <div>
+                                    <label>Key:
+                                        <input
+                                            type="text"
+                                            name="key"
+                                            size="10"
+                                            value={pairs[device.sender].key || '' }
+                                            onChange={e => handleChange(e, device.sender)}
+                                        />
+                                    </label>
+                                    </div>
+                                    
+                                    <div>
+                                    <label>Value:
+                                         <input 
+                                            type="text" 
+                                            name="value" 
+                                            size="10"
+                                            value={pairs[device.sender].value || ''} 
+                                            onChange={e => handleChange(e, device.sender)}
+                                        />
+                                    </label>
+                                    </div>
                                 </td>
                             </tr>
                            
@@ -64,8 +138,16 @@ const Posts = () => {
                    ))}
                 </tbody>
             </table>
-        )}
-        </div> );
+            
+        )
+        
+        }
+        </div>
+        <div>
+            <p className="btn btn-success" onClick= {() => sendPairs()}>Send</p>
+        </div>
+        </>
+         );
 }
  
 export default Posts;
