@@ -5,6 +5,7 @@ import axios from "axios";
 const Posts = () => {
     const [post, setPost] = useState([]);
     const [pairs, setPairs] = useState({});
+    const data = [];
 
     const handleChange = (event, sender) => {
         const name = event.target.name;
@@ -14,68 +15,73 @@ const Posts = () => {
         console.log("handle",pairs)
       }
 
+    const sendPostRequest = async () => {
+        try {
+            const resp = await axios.post('/update', pairs);
+            console.log(resp.data);
+        } catch (err) {
+            // Handle Error Here
+            console.error(err);
+        }
+    };
     const sendPairs = () => {
      
         console.log("sendPairsFunc",pairs)
         for(var k in pairs)
         {
-            console.log(pairs[k])
+            if(pairs[k].key && pairs[k].value && !data.find(element => element === pairs[k]))
+            {
+               data.push({[k]:pairs[k]})
+            }
         }
-        axios.post('/update', {
-            pairs
-          })
-          .then((response) => {
-            console.log(response);
-          }, (error) => {
-            console.log(error);
-          });
-
-         
+        console.log(data)
+        sendPostRequest();
+          
+         //setData([]);
       }
 
-    //useEffect(()=>{
-        // axios.get('https://jsonplaceholder.typicode.com/todos')
-        // .then(res=>{
-        //         console.log(res.data);
-        //         setPosts(res.data);
-        // });
 
-        // if(!!window.EventSource)
-        // {
-        //     var source = new EventSource('/events');
-        // }
-
-        const callBackForEvent = useCallback( (event) =>
-        {
-            for(const prop in event.detail)
-            {
-                    if(!(pairs.hasOwnProperty(event.detail[prop].sender)))
-                    {
-                        setPairs( values => ({...values,  [event.detail[prop].sender]:{ } }));
-                    } 
-            }            
-         
+        useEffect(() => {
+            //console.log("Pairs:",pairs)
             for(var k in pairs)
             {
-                if(event.detail.find( ({ sender }) => sender === parseInt(k,10) ) === undefined)
+                if(post.find( ({ sender }) => sender === parseInt(k,10) ) === undefined)
                 {
                     delete pairs[k]
                 }
             }
-            console.log("useeffect", pairs)
-            setPost(event.detail);
+        },[post])
 
+        const callBackForEvent = useCallback( (event) =>
+        {
+            var data = JSON.parse(event.data)
+
+            console.log("Detail:",data)
+            for(const prop in data)
+            {
+                    if(!(pairs.hasOwnProperty(data[prop].sender)))
+                    {
+                        setPairs( values => ({...values,  [data[prop].sender]:{ } }));
+                    } 
+            }            
+
+            console.log("useeffect", pairs)
+            
+            setPost(data);
             
         },[pairs]);
 
         useEffect(() =>{
+            
+            if(!!window.EventSource)
+            {
+                var source = new EventSource('/events')
+            }
+            source.addEventListener('new_readings', callBackForEvent)
 
-            window.addEventListener('new_readings', callBackForEvent)
-
-            return () => window.removeEventListener('new_readings', callBackForEvent)
+            return () => source.removeEventListener('new_readings', callBackForEvent)
         },[callBackForEvent])
      
-   // },[pairs]);
 
     return (<> <div>{
         !post ? ("No data found "):(
@@ -92,8 +98,8 @@ const Posts = () => {
                 <tbody>
                     {
                         post.map(device => (
-                            <>
-                            <tr key={device.sender}>
+                            <React.Fragment key={device.sender}>
+                            <tr>
                                 <td rowSpan={device.data.length + 1}>
                                     {device.sender}</td>
                                 <td rowSpan={device.data.length + 1}>
@@ -128,13 +134,13 @@ const Posts = () => {
                             </tr>
                            
                            {
-                               device.data.map(data => (
-                                   <tr>
+                               device.data.map((data,i) => (
+                                   <tr key={i}>
                                         <td>{data}</td>
                                    </tr>
                           ))}
                           
-                           </>
+                           </React.Fragment>
                    ))}
                 </tbody>
             </table>
