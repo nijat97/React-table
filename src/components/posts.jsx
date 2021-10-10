@@ -17,11 +17,19 @@ const Posts = () => {
 
     const sendPostRequest = async () => {
         try {
-            const resp = await axios.post('/update', pairs);
+            const resp = await axios.post("/update", 
+           data,
+            {
+                headers: {'content-type': 'application/json' }
+            }
+            );
             console.log(resp.data);
         } catch (err) {
-            // Handle Error Here
-            console.error(err);
+            console.log(err.response.data)
+            console.log(err.response.status)
+            console.log(err.response.headers)
+            console.log(err.response.data.error)
+            console.log(err.message)
         }
     };
     const sendPairs = () => {
