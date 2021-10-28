@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from "axios";
-import $ from "jquery";
 
+//give meaning to key value pairs, shows temperature etc. 
+//buttons or textboxes to send commands based on type of key. 
 
 const Posts = () => {
     const [post, setPost] = useState([]);
@@ -11,8 +12,7 @@ const Posts = () => {
     const handleChange = (event, sender) => {
         const name = event.target.name;
         const value = event.target.value;
-        //setPairs(values => ({...values,  [sender]: { ...values[sender], [name]: value}}))
-        $.extend(true,pairs,{ [sender]: { [name]: value}})
+        Object.assign(pairs[sender], { [name]: value});
         console.log("handle",pairs)
       }
 
@@ -70,11 +70,11 @@ const Posts = () => {
             {
                     if(!(pairs.hasOwnProperty(data[prop].sender)))
                     {
-                        $.extend(true,pairs,{  [data[prop].sender]:{ } });
+                        setPairs(values => ({...values,  [data[prop].sender]: { }}))
                     } 
             }            
 
-            //console.log( pairs)
+            console.log( pairs)
             
             setPost(data);
             
