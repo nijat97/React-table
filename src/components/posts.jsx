@@ -1,28 +1,43 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from "axios";
 
-//give meaning to key value pairs, shows temperature etc. 
-//buttons or textboxes to send commands based on type of key. 
-
 const Posts = () => {
     const [post, setPost] = useState([]);
-    const [pairs, setPairs] = useState({});
-    const data = [];
+    const [pairs, setPairs] = useState([]);
 
-    const handleChange = (event, sender) => {
-        const name = event.target.name;
-        const value = event.target.value;
-        Object.assign(pairs[sender], { [name]: value});
-        console.log("handle",pairs)
-      }
 
-    const sendPostRequest = async () => {
+    const handleChange = (n, val) => {
+        const name = parseInt(n,10);
+        const value = parseInt( (val === true || val === false) ? + val : val);
+        //Object.assign(pairs, { [name]: value });
+        const i = pairs.findIndex(element => element[0] === name)
+        if(i === -1)
+        {
+            pairs.push([name, value]);
+        }
+        else
+        {
+            pairs[i]=[name, value];
+        }
+
+        console.log("handle", pairs)
+    }
+
+    const sendPostRequest = async (id) => {
+
+        const element = pairs.find(e => e[0] === id);
+        if(element === NaN || element[1] === NaN)
+        {
+            alert("Set value before sending!");
+            return;
+        }
+        let jsonString = JSON.stringify(element);
         try {
-            const resp = await axios.post("/update", 
-           data,
-            {
-                headers: {'content-type': 'application/json' }
-            }
+            const resp = await axios.post("/update",
+                jsonString,
+                {
+                    headers: { 'content-type': 'application/json' }
+                }
             );
             console.log(resp.data);
         } catch (err) {
@@ -33,141 +48,161 @@ const Posts = () => {
             console.log(err.message)
         }
     };
-    const sendPairs = () => {
-     
-        //console.log("sendPairsFunc",pairs)
-        for(let k in pairs)
-        {
-            if(pairs[k].key && pairs[k].value && !data.find(element => element === pairs[k]))
-            {
-               data.push({[k]:pairs[k]})
+
+    useEffect(() => {
+        //console.log("Pairs:",pairs)
+        pairs.forEach(item => {
+            if (post.find((element) => element.ID === item[0]) === undefined) {
+                pairs.splice(pairs.findIndex(item),1)
             }
+        })
+    }, [post])
+
+    const callBackForEvent = useCallback((event) => {
+        const data = JSON.parse(event.data)
+
+        console.log("Detail:", data)
+
+        data.forEach(item => {
+            const i = pairs.findIndex(element => element[0] === item.ID)
+            if (i === -1) {
+                pairs.push([item.ID, NaN])
+            }
+        })
+        console.log(pairs)
+
+        setPost(data);
+
+    }, [pairs]);
+
+    useEffect(() => {
+
+        if (!!window.EventSource) {
+            var source = new EventSource('/events')
         }
-        //console.log(data)
-        sendPostRequest();
-          
-         //setData([]);
-      }
+        source.addEventListener('new_readings', callBackForEvent)
 
+        return () => source.removeEventListener('new_readings', callBackForEvent)
+    }, [callBackForEvent])
 
-        useEffect(() => {
-            //console.log("Pairs:",pairs)
-            for(let k in pairs)
-            {
-                if(post.find( ({ sender }) => sender === parseInt(k,10) ) === undefined)
-                {
-                    delete pairs[k]
-                }
-            }
-        },[post])
-
-        const callBackForEvent = useCallback( (event) =>
+    const renderKey = (key) =>
+    {
+        switch(key)
         {
-            const data = JSON.parse(event.data)
+            case 1:
+                return "Temperature";
+            case 2:
+                return "Humidity";
+            case 3:
+                return "LED";
+            case 4:
+                return "Air conditioner";
+            default:
+                return "Unknown key";
 
-            console.log("Detail:",data)
-            for(const prop in data)
-            {
-                    if(!(pairs.hasOwnProperty(data[prop].sender)))
-                    {
-                        setPairs(values => ({...values,  [data[prop].sender]: { }}))
-                    } 
-            }            
+        }
+    }
 
-            console.log( pairs)
-            
-            setPost(data);
-            
-        },[pairs]);
+    const renderInput = (device) =>
+    {
+        if(device.key === 1)
+        return(
+            <input
+            type="number"
+            name={device.ID}
+            value={pairs.find(element => element[0] === device.ID)[1] || ''}
+            onChange={e => handleChange(e.target.name, e.target.value)}
+            />
+        )
+        else if(device.key === 2)
+        {
+            return(<div>Unavailable</div>)
+        }
+        else if(device.key === 3 || device.key === 4)
+        {
+            return(
+                <input 
+                    type="checkbox"
+                    name={device.ID}
+                    checked={pairs.find(element => element[0] === device.ID)[1] || ''}
+                    onChange={e => handleChange(e.target.name,e.target.checked)}
+                />
+            )
+        }
+        else
+        {
+            return(<div>Unknown key</div>)
+        }
+    }
 
-        useEffect(() =>{
-            
-            if(!!window.EventSource)
-            {
-                var source = new EventSource('/events')
-            }
-            source.addEventListener('new_readings', callBackForEvent)
+    const renderValue = (device) =>
+    {
+        switch(device.key)
+        {
+            case 1:
+                return String(device.value) + "'C";
+            case 2:
+                return String(device.value) + "%";
+            case 3:
+                return device.value === 1 ? "ON" : "OFF";
+            case 4:
+                return device.value === 1 ? "ON" : "OFF";
+            default:
+                return "Unknown key";
 
-            return () => source.removeEventListener('new_readings', callBackForEvent)
-        },[callBackForEvent])
-     
+        }
+    }
 
     return (<> <div>{
-        !post ? ("No data found "):(
+        !post ? ("No data found ") : (
             <table className='table'>
                 <thead>
                     <tr>
-                        <th>Sender Address</th>
-                        <th>Target Address</th>
                         <th>Message ID</th>
-                        <th>Control</th>
-                        <th>Data</th>
+                        <th>Sender Address</th>
+                        <th>Message #</th>
+                        <th>Key</th>
+                        <th>Value</th>
+                        <th>New Value</th>
+                        <th>Send new value</th>
                     </tr>
                 </thead>
                 <tbody>
                     {
                         post.map(device => (
-                            <React.Fragment key={device.sender}>
-                            <tr>
-                                <td rowSpan={device.data[0].length + 1}>
-                                    {device.sender}</td>
-                                <td rowSpan={device.data[0].length + 1}>
-                                    {device.target}</td>
-                                <td rowSpan={device.data[0].length + 1}>
-                                    {device.readingId}</td>
-                              
-                                <td rowSpan={device.data[0].length + 1}>
-                                    <div>
-                                    <label>Key:
-                                        <input
-                                            type="number"
-                                            name="key"
-                                            size="10"
-                                            value={pairs[device.sender].key || '' }
-                                            onChange={e => handleChange(e, device.sender)}
-                                        />
-                                    </label>
-                                    </div>
-                                    
-                                    <div>
-                                    <label>Value:
-                                         <input 
-                                            type="number" 
-                                            name="value" 
-                                            size="10"
-                                            value={pairs[device.sender].value || ''} 
-                                            onChange={e => handleChange(e, device.sender)}
-                                        />
-                                    </label>
-                                    </div>
-                                </td>
-                                <td rowSpan={device.data[0].length + 1}>
-                                     <div>{device.data[0].key}</div>
-                                      <div>{device.data[0].value}</div>
-                                    </td>
-                            </tr>
-                           
-                           {/* {
-                               device.data.map((data,i) => (
-                                   <tr key={i}>
-                                        <td>{data}</td>
-                                   </tr>
-                          ))} */}
-                          
-                           </React.Fragment>
-                   ))}
+                            <React.Fragment key={device.ID}>
+                                <tr>
+                                    <td rowSpan={device.length + 1}>
+                                        {device.ID}</td>
+                                    <td rowSpan={device.length + 1}>
+                                        {device.sender}</td>
+                                    <td rowSpan={device.length + 1}>
+                                        {device.readingId}</td>
+                                    <td rowSpan={device.length + 1}>
+                                        {renderKey(device.key)}</td>
+                                    <td rowSpan={device.length + 1}>
+                                        {renderValue(device)}</td>
+                                    <td rowSpan={device.length + 1}>
+                                        <div>
+                                            <label>
+                                                {renderInput(device)}
+                                            </label>
+                                        </div></td>
+                                    <td rowSpan={device.length + 1}>
+                                        <div><button type="button" class="btn btn-success" onClick={() => sendPostRequest(device.ID)} disabled={device.key === 2 ? 1 : 0 }>Send</button></div></td>
+                                </tr>
+                            </React.Fragment>
+                        ))}
                 </tbody>
             </table>
-            
+
         )
-        
-        }
-        </div>
-        <div>
-            <p className="btn btn-success" onClick= {() => sendPairs()}>Send</p>
-        </div>
-        </>
-         );
+
+    }
+    </div>
+
+    </>
+    );
 }
- 
+
 export default Posts;
