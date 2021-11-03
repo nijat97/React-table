@@ -5,11 +5,9 @@ const Posts = () => {
     const [post, setPost] = useState([]);
     const [pairs, setPairs] = useState([]);
 
-
     const handleChange = (n, val) => {
         const name = parseInt(n,10);
         const value = parseInt( (val === true || val === false) ? + val : val);
-        //Object.assign(pairs, { [name]: value });
         const i = pairs.findIndex(element => element[0] === name)
         if(i === -1)
         {
@@ -23,15 +21,16 @@ const Posts = () => {
         console.log("handle", pairs)
     }
 
-    const sendPostRequest = async (id) => {
+    const sendPostRequest = async (dev) => {
 
-        const element = pairs.find(e => e[0] === id);
-        if(element === NaN || element[1] === NaN)
+        const element = pairs.find(e => e[0] === dev.ID);
+        if(element[1] === NaN)
         {
             alert("Set value before sending!");
             return;
         }
-        let jsonString = JSON.stringify(element);
+        const obj = { "target": dev.sender, "key": dev.key, "value": element[1] };
+        let jsonString = JSON.stringify(obj);
         try {
             const resp = await axios.post("/update",
                 jsonString,
@@ -189,7 +188,7 @@ const Posts = () => {
                                             </label>
                                         </div></td>
                                     <td rowSpan={device.length + 1}>
-                                        <div><button type="button" class="btn btn-success" onClick={() => sendPostRequest(device.ID)} disabled={device.key === 2 ? 1 : 0 }>Send</button></div></td>
+                                        <div><button type="button" class="btn btn-success" onClick={() => sendPostRequest(device)} disabled={device.key === 2 ? 1 : 0 }>Send</button></div></td>
                                 </tr>
                             </React.Fragment>
                         ))}
